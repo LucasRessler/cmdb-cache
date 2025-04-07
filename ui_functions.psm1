@@ -53,12 +53,15 @@ function UiGetCreds {
     return ($Script:DialogCredential)
 }
 
+function FormatCreds {
+    param ([PSCredential]$Creds)
+    return "$($Creds.UserName)`r`n$($Creds.Password | ConvertFrom-SecureString)"
+}
+
 function SaveCreds {
     [CmdletBinding()]
     param ([PSCredential]$Creds, [String]$CPath)
-    [String]$username = $Creds.UserName
-    [String]$encrypted_pwd = $Creds.Password | ConvertFrom-SecureString
-    "$username`r`n$encrypted_pwd" | Set-Content -Path $CPath
+    FormatCreds $Creds | Set-Content -Path $CPath
 }
 
 function LoadOrUiGetCreds {
@@ -77,11 +80,6 @@ function LoadOrUiGetCreds {
     return (New-Object System.Management.Automation.PSCredential ($username, $password))
 }
 
-function FormatCreds {
-    param ([PSCredential]$creds)
-    return "$($creds.UserName)`r`n$($creds.Password | ConvertFrom-SecureString)"
-}
-
 function UiUpdateCacheForced {
     [CmdletBinding()]
     param ([String]$CPath = "$HOME\.cmdb_cache_creds")
@@ -91,7 +89,7 @@ function UiUpdateCacheForced {
     try {
         [PSCredential]$creds = LoadOrUiGetCreds $CPath
         UpdateCache -CmdbCredentials $creds -ForceUpdate
-        if (-not (Test-Path $CPath)) { FormatCreds $creds | Set-Content -Path $CPath }
+        if (-not (Test-Path $CPath)) { SaveCreds $creds $CPath }
     } catch {
         if ($_.Exception.Message.Contains("401") -and (Test-Path $CPath)) { Remove-Item -Path $CPath }
         msg.exe * $_.Exception.Message; throw $_.Exception
