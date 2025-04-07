@@ -1,0 +1,17 @@
+This program provides utilities to interact with the CMDB API.
+Use the object command to specify which CMDB domain to target;
+By default, `TBLHOST` is the target object.
+Use select mode to select which fields will be included
+in the request outputs; By default, this is set to [HOSTID].
+Finally, use request mode to query CMDB object entries.
+Each mode also supports the 'help' command for more details.
+The target object and selection are saved between sessions.
+
+COMMANDS:
+  exit     quit  q     Exit the terminal
+  help     h     ?     Show this help message
+  object   o           Set target cmdb-object
+  select   s           Enter select mode
+  request  r           Enter request mode
+  logic    l           Enter logic solver mode
+  clear    c           Clear the screen

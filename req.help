@@ -1,0 +1,39 @@
+This mode lets you send GET requests to the CMDB.
+It recognizes a few single-word commands.
+Any other input is interpreted as a request expression.
+When first sending a request, a pop-up will appear, asking you
+for your CMDB credentials; These are stored in an encrypted file,
+so you won't have to enter them a second time using this program.
+
+COMMANDS:
+  exit    quit  q     Exit request mode
+  help    h     ?     Show this help message
+  clear   c           Clear the screen
+  reauth  r           Delete saved and input new credentials
+
+EXPRESSION SYNTAX:
+  <field> <operator> <value>
+  <subexpression> <combinator> <subexpression>
+  <invert> (<subexpression>)
+
+VALID OPERATORS:                VALID COMBINATORS:
+  ~  =~  (IsMatch)                &&  &  AND  And  and
+  =  ==  (IsEqual)                ||  |  OR   Or   or
+  != <>  (IsNotEqual)
+  <      (LessThan)             INVERT SYNTAX:
+  <=     (LessThanOrEqual)        !  NOT  Not  not
+  >      (GreaterThan)            Must be followed by a
+  >=     (GreaterThanOrEqual)     subexpression in parentheses
+
+FIELDS AND VALUES:
+  Can be any string. If no quotes are used, whitespace or
+  reserved symbols that are not escaped with \ are interpreted
+  as not belonging to the string. Single and Double quotes are
+  both supported and only differ in allowing the other quote
+  type as part of the string. Fields are also case-insensitive;
+  This means that `A = 'b'` and `a = 'b'` are treated as one
+  and the same expression, while `A = 'b'` and `A = 'B'` are
+  treated as two separate expressions.
+
+EXAMPLE EXPRESSION:
+  hroom ~ 'RZ%' && !(hostid < "H12340000" | hostid > "H12350000")
