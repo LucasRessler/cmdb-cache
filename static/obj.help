@@ -1,0 +1,12 @@
+This mode allows you to select the target object for all CMDB-queries.
+It recognizes a few single-word commands.
+Any other input is interpreted as an object.
+The object is fuzzy matched against a list of valid target objects.
+If a close enough match is found, it will be set as the new target object.
+
+COMMANDS:
+  exit   quit  q     Exit object mode
+  help   h     ?     Show this help message
+  valid  v           Show valid target objects
+  show   s           Show current target object
+  clear  c           Clear the screen
