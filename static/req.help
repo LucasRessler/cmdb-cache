@@ -10,6 +10,7 @@ COMMANDS:
   help    h     ?     Show this help message
   clear   c           Clear the screen
   reauth  r           Delete saved and input new credentials
+  target  t           Set a path to save the next response to
 
 EXPRESSION SYNTAX:
   <field> <operator> <value>
