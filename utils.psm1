@@ -1,7 +1,7 @@
 function ConvertTo-Hashtable {
     [CmdletBinding()]
     param(
-        [parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipeline)]
         [PSCustomObject]$input_object
     )
     process {
@@ -57,7 +57,8 @@ function LynxDistance {
 }
 
 function ClosestMatch {
-    param ([String]$needle, [String[]]$haystack, [Int]$threshold = 120)
+    param ([String]$needle, [String[]]$haystack, [Int]$threshold = 120, [Int]$min_querylen = 3)
+    if ($needle.Length -lt $min_querylen) { throw "Weak query" }
     [PSCustomObject[]]$scored = $haystack | ForEach-Object {
         try { [PSCustomobject]@{ v = $_; d = LynxDistance $needle $_ } }
         catch { $null }
@@ -79,11 +80,14 @@ function PrettyList {
     [Int]$num_rows = [Math]::Ceiling($list.Count / $num_cols)
     [String[]]$rows = @()
     for ($i = 0; $i -lt $list.Count; $i++) {
-        [String]$f = "  $($list[$i])$(" " * (2 + $max_len - $list[$i].Length))"
+        [String]$s = $list[$i] -replace "%>", (" " * ($max_len - $list[$i].Length + 2))
+        [String]$f = "  $s$(" " * (2 + $max_len - $s.Length))"
         [Int]$r = $i % $num_rows
         if ($rows[$r]) { $rows[$r] += $f}
         else { $rows += $f }
     }
-    if ($num_cols -gt 1) { Write-Host ("-" * ($num_cols * ($max_len + 4))) }
-    return $rows -join "`r`n"
+    [String]$out = ""
+    if ($num_cols -gt 1) { $out += ("-" * ($num_cols * ($max_len + 4))) + "`r`n" }
+    $out += $rows -join "`r`n"
+    return $out
 }
