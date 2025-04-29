@@ -2,11 +2,19 @@ This mode allows you to select which fields will
 be included in the CMDB's query responses.
 It recognizes a few single-word commands.
 Any other input is interpreted as a field.
-The field will then be added to or removed from
-the selection list.
+The field is fuzzy matched against a list of valid
+object fields. If a close enough match is found, it
+will be added to or removed from the selection list.
+Note that query responses will be sorted by the first
+selected field; you can use the 'rotate' command to
+rotate the last field to the first position.
 
 COMMANDS:
-  exit   quit  q     Exit select mode
-  help   h     ?     Show this help message
-  show   s           Show the current selection
-  clear  c           Clear the screen
+  exit    quit  q     Exit select mode
+  help    h     ?     Show this help message
+  valid   v           Show valid selection fields
+  vvalid  vv          Show valid field descriptions
+  show    s           Show the current selection
+  rotate  r           Rotate last field to front
+  empty   e           Remove all selected fields
+  clear   c           Clear the screen
