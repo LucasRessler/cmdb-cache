@@ -1,6 +1,3 @@
-using module .\cmdb_handle.psm1
-using module .\utils.psm1
-
 [String]$creds_path = "$HOME\.cmdb_cache_creds"
 [String]$static_path = "$PSScriptRoot\static"
 [String]$settings_path = "$PSScriptRoot\settings.json"
@@ -46,11 +43,21 @@ function EnsureCredentials {
     }
 }
 
+function GetCmdbUrl {
+    param ([Hashtable]$settings)
+    if ($null -eq $settings.cmdb_url) {
+        [String]$url = Read-Host "Please enter CMDB Host Domain"
+        $settings.cmdb_url = $url
+    }
+    return $settings.cmdb_url
+}
+
 function SendRequest {
     param (
         [Hashtable]$settings,
         [String]$expr,
-        [Ref]$creds
+        [Ref]$creds,
+        [Ref]$target
     )
     [String]$object = $settings.obj
     [String[]]$select = $settings.select[$object]
@@ -59,13 +66,18 @@ function SendRequest {
         Write-Host ">> $(RenderAst $term)"
         EnsureCredentials $creds
         [Hashtable]$qparams = @{
+            BaseUrl     = GetCmdbUrl $settings
             Credentials = $creds.Value
             Object      = $object
             Select      = $select
-            Sort        = "HOSTID"
+            Sort        = $select[0]
             Params      = ConvertToParams $term
         }
-        Write-Host (CMDBQuery @qparams | ConvertTo-Json)
+        [PSCustomObject]$response = CMDBQuery @qparams
+        if ($target -and $target.Value) {
+            $response | ConvertTo-Json | Set-Content -Path $target.Value
+            $target.Value = $null
+        }; Write-Host ($response | ConvertTo-Json)
     }
     catch {
         $Host.UI.WriteErrorLine($_.Exception.Message)
@@ -88,8 +100,13 @@ function Reauthorize {
     catch { $Host.UI.WriteErrorLine($_.Exception.Message) }   
 }
 
+function GetTarget {
+    return Read-Host "[RT] Enter target path for next response"
+}
+
 function RequestLoop {
     param ([Hashtable]$settings, [Ref]$creds)
+    [String]$target = $null
     [Bool]$r_loop = $true
     while ($r_loop) {
         [String]$expr = (Read-Host "`n[R] Enter Command or Expression").Trim()
@@ -99,7 +116,8 @@ function RequestLoop {
             ($expr -in "exit", "quit", "q") { $r_loop = $false }
             ($expr -in "clear", "c") { Clear-Host }
             ($expr -in "reauth", "r") { Reauthorize $creds }
-            default { SendRequest $settings $expr $creds }
+            ($expr -in "target", "t") { $target = GetTarget }
+            default { SendRequest $settings $expr $creds ([Ref]$target) }
         }
     }
 }
@@ -146,11 +164,22 @@ function ToggleSelection {
     else { $select = @($select | Where-Object { $_ -ne $field }); Write-Host "Removed '$field' from selection." }
     $settings.select[$settings.obj] = $select; ShowSelection $select
 }
+function RotateSelection {
+    param ([Hashtable]$settings)
+    [String[]]$select = $settings.select[$settings.obj]
+    if ($select.Count -gt 1) { $select = 0..($select.Count - 1) | ForEach-Object { $select[$_ - 1] } }
+    $settings.select[$settings.obj] = $select; ShowSelection $select
+}
+function EmptySelection {
+    param ([Hashtable]$settings)
+    $settings.select[$settings.obj] = @(); ShowSelection @()
+}
 function ShowValidKeys {
-    param ([Hashtable]$settings, [Hashtable]$obj_list)
+    param ([Hashtable]$settings, [Hashtable]$obj_list, [Bool]$detailed)
     if ($null -eq $obj_list) { $Host.UI.WriteErrorLine("Could not find an object list! :("); return }
     if ($null -eq $obj_list[$settings.obj]) { $Host.UI.WriteErrorLine("Could not find '$($settings.obj)' in the object list! :("); return }
     [String[]]$fields = $obj_list[$settings.obj].Keys; [Array]::Sort($fields)
+    if ($detailed) { $fields = $fields | ForEach-Object { "$_%>$($obj_list[$settings.obj][$_])"} }
     Write-Host "Valid Fields for $($settings.obj):`r`n$(PrettyList $fields)"
 }
 function SelectLoop {
@@ -164,7 +193,10 @@ function SelectLoop {
             ($expr -in "help", "h", "?") { ShowHelp sel }
             ($expr -in "exit", "quit", "q") { $s_loop = $false }
             ($expr -in "valid", "v") { ShowValidKeys $settings $obj_list }
+            ($expr -in "vvalid", "vv") { ShowValidKeys $settings $obj_list $true }
             ($expr -in "show", "s") { ShowSelection $settings.select[$settings.obj] }
+            ($expr -in "rotate", "r") { RotateSelection $settings }
+            ($expr -in "empty", "e") { EmptySelection $settings }
             ($expr -in "clear", "c") { Clear-Host }
             default { ToggleSelection $settings $obj_list $expr.ToUpper() }
         }
@@ -212,7 +244,9 @@ function ObjectLoop {
 }
 
 function Terminal {
+    if ($null -eq (Get-Module "utils")) { Import-Module "$PSScriptRoot\utils.psm1"}
     if ($null -eq (Get-Module "parser")) { Import-Module "$PSScriptRoot\parser.psm1" }
+    if ($null -eq (Get-Module "cmdb_handle")) { Import-Module "$PSScriptRoot\cmdb_handle.psm1" }
     if ($null -eq (Get-Module "ui_functions")) { Import-Module "$PSScriptRoot\ui_functions.psm1" }
     try { [Hashtable]$settings = GetSettings }
     catch {
@@ -247,7 +281,9 @@ function Terminal {
     }
     finally {
         SaveSettings $settings
+        if ($null -ne (Get-Module "utils")) { Remove-Module "utils" }
         if ($null -ne (Get-Module "parser")) { Remove-Module "parser" }
+        if ($null -ne (Get-Module "cmdb_handle")) { Remove-Module "cmdb_handle" }
     }
 }
 
