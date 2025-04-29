@@ -688,6 +688,21 @@ function EvaluateExpression {
     return NormalizeAst (ParseExpression $expr)
 }
 
+# Turns a parsed logic tree into an array of CMDB parameters.
+# Expects a normalized logic tree in disjunctive normal form.
+# Booleans, Inversions and Symbols are not supported.
+#
+# Arguments:
+#   [PSCustomObject]$node - The logic tree to convert.
+#
+# Optional Arguments:
+#   [CmdbCombine]$combine - The top level `combine` value; defaults to AND.
+#
+# Returns:
+#   An array of `CmdbParam` values, representing a CMDB query request.
+#
+# Throws:
+#   On any unsupported terms: Booleans, Inversions, Symbols, (non-flat) Combinations.
 function ConvertToParams {
     param ([PSCustomObject]$node, [CmdbCombine]$combine = [CmdbCombine]::And)
     switch ($node.term_type) {
@@ -698,7 +713,7 @@ function ConvertToParams {
             if ($node.value) { throw "Expression reduced to 'True', which would return every value in the database" }
             else { throw "Expression reduced to 'False', which would not return any value" }
         }
-        ([TermType]::Comparison) { return [CmdbParam]::New($node.value.field, $node.value.value, $node.value.operator, $combine) }
+        ([TermType]::Comparison) { return [CmdbParam]::New($node.value.field.ToUpper(), $node.value.value, $node.value.operator, $combine) }
         ([TermType]::FlatCombination) {
             return @(
                 ConvertToParams $node.value.terms[0] $combine
